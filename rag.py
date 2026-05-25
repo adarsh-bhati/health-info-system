@@ -2,6 +2,9 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 
+# ==========================================================
+# GLOBAL STORAGE
+# ==========================================================
 documents = []
 metadata_store = []
 index = None
@@ -24,7 +27,7 @@ def get_model():
 
 
 # ==========================================================
-# CHUNKING
+# SMART CHUNKING
 # ==========================================================
 def chunk_text(text, chunk_size=500, overlap=100):
     words = text.split()
@@ -39,13 +42,14 @@ def chunk_text(text, chunk_size=500, overlap=100):
         end = start + chunk_size
         chunk = " ".join(words[start:end])
         chunks.append(chunk)
+
         start += chunk_size - overlap
 
     return chunks
 
 
 # ==========================================================
-# BUILD INDEX
+# BUILD VECTOR INDEX
 # ==========================================================
 def build_index(chunks, source_name, user_id=None):
     global index
@@ -78,18 +82,20 @@ def build_index(chunks, source_name, user_id=None):
 
 
 # ==========================================================
-# RETRIEVE
+# RETRIEVE RELEVANT CONTEXT
 # ==========================================================
 def retrieve(query, k=5, user_id=None):
     global index
 
-    if index is None:
-        return ["No medical knowledge base loaded yet."], ["System"]
-
     if not query.strip():
-        return ["Empty query received."], ["System"]
+        return ["Please enter a health-related question."], ["System"]
 
+    # Lazy load model
     model_instance = get_model()
+
+    # If no index yet, still allow general AI response
+    if index is None:
+        return [], []
 
     query_embedding = model_instance.encode(
         [query],
@@ -114,6 +120,7 @@ def retrieve(query, k=5, user_id=None):
 
         meta = metadata_store[idx]
 
+        # Per-user filtering
         if user_id is not None:
             if meta["user_id"] is not None and meta["user_id"] != user_id:
                 continue
@@ -121,14 +128,11 @@ def retrieve(query, k=5, user_id=None):
         results.append(documents[idx])
         refs.append(meta["source"])
 
-    if not results:
-        return ["No relevant medical context found."], ["System"]
-
     return results, refs
 
 
 # ==========================================================
-# RESET
+# RESET INDEX
 # ==========================================================
 def reset_index():
     global index
