@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signup - HealthAI</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body{
+    background:#0f172a;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-family:'Segoe UI',sans-serif;
+    color:white;
+}
+.signup-card{
+    width:450px;
+    background:#1e293b;
+    padding:40px;
+    border-radius:20px;
+    box-shadow:0 0 25px rgba(0,0,0,0.4);
+}
+.form-control{
+    background:#334155;
+    border:none;
+    color:white;
+}
+.form-control:focus{
+    background:#334155;
+    color:white;
+    box-shadow:none;
+}
+.form-control::placeholder{
+    color:#cbd5e1;
+}
+.logo-title{
+    font-weight:700;
+    text-align:center;
+    margin-bottom:10px;
+}
+.sub-text{
+    text-align:center;
+    color:#cbd5e1;
+    margin-bottom:30px;
+}
+.login-link{
+    color:#0dcaf0;
+    text-decoration:none;
+}
+.login-link:hover{
+    text-decoration:underline;
+}
+.validation-msg{
+    font-size:13px;
+    margin-top:5px;
+}
+</style>
+</head>
+<body>
+<div class="signup-card">
+    <h2 class="logo-title">Create Account</h2>
+    <p class="sub-text">HealthAI Wearable Monitoring System</p>
+    <form id="signupForm">
+        <div class="mb-3">
+            <label class="mb-2">Username</label>
+            <input type="text" class="form-control" id="username" placeholder="Only letters, numbers, underscore" required>
+            <div id="usernameMsg" class="validation-msg"></div>
+        </div>
+        <div class="mb-3">
+            <label class="mb-2">Email Address</label>
+            <input type="email" class="form-control" id="email" placeholder="example@gmail.com" required>
+            <div id="emailMsg" class="validation-msg"></div>
+        </div>
+        <div class="mb-3">
+            <label class="mb-2">Contact Number</label>
+            <input type="text" class="form-control" id="phone" placeholder="+919876543210" required>
+            <div id="phoneMsg" class="validation-msg"></div>
+        </div>
+        <div class="mb-4">
+            <label class="mb-2">Password</label>
+            <input type="password" class="form-control" id="password" placeholder="Min 8 chars with special character" required>
+            <div id="passwordMsg" class="validation-msg"></div>
+        </div>
+        <button class="btn btn-primary w-100 py-2" id="signupBtn">Create Account</button>
+    </form>
+    <div id="statusMsg" class="mt-4 text-center"></div>
+    <div class="text-center mt-4">
+        Already have an account? <a href="/login" class="login-link">Login</a>
+    </div>
+</div>
+<script>
+const usernamePattern = /^[A-Za-z0-9_]+$/;
+const emailPattern = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const phonePattern = /^\+91\d{10}$/;
+const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&^()_+\-=]).+$/;
+
+function validateUsername(){
+    const value = document.getElementById("username").value.trim();
+    if(!usernamePattern.test(value)){
+        document.getElementById("usernameMsg").innerHTML = `<span class="text-danger">Only letters, numbers, underscore allowed</span>`;
+        return false;
+    }
+    document.getElementById("usernameMsg").innerHTML = `<span class="text-success">Valid username</span>`;
+    return true;
+}
+function validateEmail(){
+    const value = document.getElementById("email").value.trim();
+    if(!emailPattern.test(value)){
+        document.getElementById("emailMsg").innerHTML = `<span class="text-danger">Invalid email format</span>`;
+        return false;
+    }
+    document.getElementById("emailMsg").innerHTML = `<span class="text-success">Valid email</span>`;
+    return true;
+}
+function validatePhone(){
+    const value = document.getElementById("phone").value.trim();
+    if(!phonePattern.test(value)){
+        document.getElementById("phoneMsg").innerHTML = `<span class="text-danger">Use +91XXXXXXXXXX format</span>`;
+        return false;
+    }
+    document.getElementById("phoneMsg").innerHTML = `<span class="text-success">Valid phone number</span>`;
+    return true;
+}
+function validatePassword(){
+    const value = document.getElementById("password").value.trim();
+    if(value.length < 8){
+        document.getElementById("passwordMsg").innerHTML = `<span class="text-danger">Minimum 8 characters required</span>`;
+        return false;
+    }
+    if(!passwordPattern.test(value)){
+        document.getElementById("passwordMsg").innerHTML = `<span class="text-danger">Must contain letter, number, special character</span>`;
+        return false;
+    }
+    document.getElementById("passwordMsg").innerHTML = `<span class="text-success">Strong password</span>`;
+    return true;
+}
+document.getElementById("username").addEventListener("input", validateUsername);
+document.getElementById("email").addEventListener("input", validateEmail);
+document.getElementById("phone").addEventListener("input", validatePhone);
+document.getElementById("password").addEventListener("input", validatePassword);
+document.getElementById("signupForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+    const ok = validateUsername() && validateEmail() && validatePhone() && validatePassword();
+    if(!ok) return;
+    const signupData = {
+        username: document.getElementById("username").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        password: document.getElementById("password").value.trim()
+    };
+    const response = await fetch("/api/signup", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(signupData)
+    });
+    const result = await response.json();
+    if(result.status === "success"){
+        document.getElementById("statusMsg").innerHTML = `<div class="alert alert-success">✅ Account Created Successfully</div>`;
+        setTimeout(()=>{ window.location.href = "/login"; },1500);
+    } else {
+        document.getElementById("statusMsg").innerHTML = `<div class="alert alert-danger">❌ ${result.message}</div>`;
+    }
+});
+</script>
+</body>
+</html>

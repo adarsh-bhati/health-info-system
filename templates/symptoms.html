@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Symptom Checker</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.wrapper {
+    display: flex;
+    height: 100vh;
+}
+
+/* SIDEBAR */
+.sidebar {
+    width: 320px;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(15px);
+    color: white;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.history-item {
+    background: rgba(255,255,255,0.15);
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.history-item:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+/* MAIN AREA */
+.main-area {
+    flex: 1;
+    background: white;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    background: #198754;
+    color: white;
+    padding: 20px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.content {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+.symptom-btn {
+    margin: 6px;
+    border-radius: 20px;
+}
+
+.selected {
+    background: #198754 !important;
+    color: white !important;
+}
+
+#resultBox {
+    margin-top: 30px;
+    padding: 25px;
+    background: #f8f9fa;
+    border-radius: 20px;
+    min-height: 200px;
+    border: 1px solid #ddd;
+}
+
+.typing {
+    color: gray;
+    margin-top: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <h4>🤒 Symptom History</h4>
+
+        <div id="historyList"></div>
+
+        <a href="/dashboard" class="btn btn-light w-100 mt-4">
+            ← Back
+        </a>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-area">
+
+        <div class="header">
+            Symptom Checker
+        </div>
+
+        <div class="content">
+
+            <h5>Select Symptoms</h5>
+
+            <div id="symptomList">
+                <button class="btn btn-outline-success symptom-btn" onclick="toggle(this)">Fever</button>
+                <button class="btn btn-outline-success symptom-btn" onclick="toggle(this)">Cough</button>
+                <button class="btn btn-outline-success symptom-btn" onclick="toggle(this)">Headache</button>
+                <button class="btn btn-outline-success symptom-btn" onclick="toggle(this)">Chest pain</button>
+                <button class="btn btn-outline-success symptom-btn" onclick="toggle(this)">Fatigue</button>
+                <button class="btn btn-outline-success symptom-btn" onclick="toggle(this)">Vomiting</button>
+                <button class="btn btn-outline-success symptom-btn" onclick="toggle(this)">Dizziness</button>
+            </div>
+
+            <input
+                type="text"
+                id="custom"
+                class="form-control mt-4"
+                placeholder="Add custom symptom"
+            >
+
+            <button
+                class="btn btn-success mt-3"
+                onclick="analyze()">
+                Analyze Symptoms
+            </button>
+
+            <div id="typing" class="typing"></div>
+
+            <div id="resultBox">
+                Select symptoms and click analyze.
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+let selected = [];
+
+function toggle(btn) {
+    let text = btn.innerText.toLowerCase();
+
+    if (selected.includes(text)) {
+        selected = selected.filter(s => s !== text);
+        btn.classList.remove("selected");
+    } else {
+        selected.push(text);
+        btn.classList.add("selected");
+    }
+}
+
+async function analyze() {
+
+    let custom = document.getElementById("custom").value.trim().toLowerCase();
+
+    let symptoms = [...selected];
+
+    if (custom) {
+        symptoms.push(custom);
+    }
+
+    if (symptoms.length === 0) {
+        alert("Select at least one symptom.");
+        return;
+    }
+
+    document.getElementById("typing").innerText = "Analyzing...";
+    document.getElementById("resultBox").innerHTML = "";
+
+    let res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+            "Content-Type":"application/json"
+        },
+        body: JSON.stringify({
+            symptoms: symptoms
+        })
+    });
+
+    let data = await res.json();
+
+    document.getElementById("typing").innerText = "";
+
+    document.getElementById("resultBox").innerHTML = `
+        <h5>📊 Analysis Result</h5>
+        <hr>
+        <div>${data.response.replace(/\n/g, "<br>")}</div>
+    `;
+
+    loadHistory();
+}
+
+async function loadHistory() {
+
+    let res = await fetch("/api/symptom-history");
+    let data = await res.json();
+
+    let container = document.getElementById("historyList");
+
+    container.innerHTML = "";
+
+    data.forEach(item => {
+        let div = document.createElement("div");
+
+        div.className = "history-item";
+
+        div.innerText = item.symptoms;
+
+        div.onclick = function() {
+            document.getElementById("resultBox").innerHTML = `
+                <h5>📊 Previous Analysis</h5>
+                <hr>
+                <div>${item.result.replace(/\n/g, "<br>")}</div>
+            `;
+        };
+
+        container.appendChild(div);
+    });
+}
+
+loadHistory();
+</script>
+
+</body>
+</html>
