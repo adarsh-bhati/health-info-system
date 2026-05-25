@@ -7,8 +7,12 @@ mongo = PyMongo()
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 
+knowledge_loaded = False
+
 
 def create_app():
+    global knowledge_loaded
+
     basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
     app = Flask(
@@ -17,16 +21,40 @@ def create_app():
         static_folder=os.path.join(basedir, 'static')
     )
 
-    app.config["SECRET_KEY"] = "devsecret"
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "devsecret")
 
-    app.config["MONGO_URI"] = "your config variable yahan se load hoga"
-
-    # better version if config.py me variable hai:
     from config import MONGO_URI
     app.config["MONGO_URI"] = MONGO_URI
 
     mongo.init_app(app)
     login_manager.init_app(app)
+
+    # Load medical knowledge base only once
+    if not knowledge_loaded:
+        from pdf_loader import load_pdf
+        from rag import chunk_text, build_index
+
+        print("Loading medical knowledge base...")
+
+        pdf_path = os.path.join(basedir, "common_disease_symptoms.pdf")
+
+        if os.path.exists(pdf_path):
+            text = load_pdf(pdf_path)
+
+            chunks = chunk_text(text)
+
+            build_index(
+                chunks,
+                "Common Disease Knowledge Base",
+                user_id=None
+            )
+
+            print("Medical knowledge loaded.")
+
+        else:
+            print("Knowledge PDF not found.")
+
+        knowledge_loaded = True
 
     from .auth import auth_bp
     from .routes import main_bp
