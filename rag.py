@@ -2,63 +2,60 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 
-# ==========================================================
-# 🧠 EMBEDDING MODEL
-# ==========================================================
-model = SentenceTransformer("all-MiniLM-L6-v2")
-
-# ==========================================================
-# 📚 STORAGE
-# ==========================================================
 documents = []
 metadata_store = []
 index = None
+model = None
 
 SIMILARITY_THRESHOLD = 0.35
 
 
 # ==========================================================
-# ✂️ SMART CHUNKING
+# LOAD MODEL ONLY WHEN NEEDED
+# ==========================================================
+def get_model():
+    global model
+
+    if model is None:
+        print("Loading embedding model...")
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    return model
+
+
+# ==========================================================
+# CHUNKING
 # ==========================================================
 def chunk_text(text, chunk_size=500, overlap=100):
-    """
-    Smart overlapping chunking
-    Better context preservation
-    """
-
     words = text.split()
 
     if not words:
         return []
 
     chunks = []
-
     start = 0
 
     while start < len(words):
         end = start + chunk_size
         chunk = " ".join(words[start:end])
         chunks.append(chunk)
-
         start += chunk_size - overlap
 
     return chunks
 
 
 # ==========================================================
-# 🔨 BUILD VECTOR INDEX
+# BUILD INDEX
 # ==========================================================
 def build_index(chunks, source_name, user_id=None):
-    """
-    Add chunks to FAISS vector store
-    """
-
     global index
 
     if not chunks:
         return
 
-    embeddings = model.encode(
+    model_instance = get_model()
+
+    embeddings = model_instance.encode(
         chunks,
         normalize_embeddings=True,
         show_progress_bar=False
@@ -74,7 +71,6 @@ def build_index(chunks, source_name, user_id=None):
 
     for chunk in chunks:
         documents.append(chunk)
-
         metadata_store.append({
             "source": source_name,
             "user_id": user_id
@@ -82,13 +78,9 @@ def build_index(chunks, source_name, user_id=None):
 
 
 # ==========================================================
-# 🔎 RETRIEVE RELEVANT CONTEXT
+# RETRIEVE
 # ==========================================================
 def retrieve(query, k=5, user_id=None):
-    """
-    Retrieve top relevant chunks
-    """
-
     global index
 
     if index is None:
@@ -97,7 +89,9 @@ def retrieve(query, k=5, user_id=None):
     if not query.strip():
         return ["Empty query received."], ["System"]
 
-    query_embedding = model.encode(
+    model_instance = get_model()
+
+    query_embedding = model_instance.encode(
         [query],
         normalize_embeddings=True,
         show_progress_bar=False
@@ -120,7 +114,6 @@ def retrieve(query, k=5, user_id=None):
 
         meta = metadata_store[idx]
 
-        # per-user filtering
         if user_id is not None:
             if meta["user_id"] is not None and meta["user_id"] != user_id:
                 continue
@@ -135,17 +128,15 @@ def retrieve(query, k=5, user_id=None):
 
 
 # ==========================================================
-# 🧹 RESET INDEX (optional utility)
+# RESET
 # ==========================================================
 def reset_index():
-    """
-    Clear vector DB
-    """
-
     global index
     global documents
     global metadata_store
+    global model
 
     index = None
     documents = []
     metadata_store = []
+    model = None
