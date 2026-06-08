@@ -13,4 +13,4 @@ venv/
 
 
 # Secrets
-config.py
+.env
