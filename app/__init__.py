@@ -2,6 +2,7 @@ from flask import Flask
 from flask_login import LoginManager
 from flask_pymongo import PyMongo
 import os
+from config import MONGO_URI
 
 mongo = PyMongo()
 login_manager = LoginManager()
@@ -19,7 +20,9 @@ def create_app():
 
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "devsecret")
 
-    app.config["MONGO_URI"] = os.getenv("MONGO_URI")
+    # LOCAL -> config.py
+    # RAILWAY -> env variable if present
+    app.config["MONGO_URI"] = os.getenv("MONGO_URI", MONGO_URI)
 
     mongo.init_app(app)
     login_manager.init_app(app)

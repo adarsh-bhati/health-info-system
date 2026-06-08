@@ -272,6 +272,7 @@ def chat_api():
     4. No exact diagnosis.
     5. No prescriptions.
     6. Suggest doctor consultation if serious.
+    7.Always answer if someone greet and remember his identity if he exploit.
     """ 
 
     ai_response = ask_ai(prompt)
